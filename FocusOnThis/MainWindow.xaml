@@ -19,13 +19,18 @@
                 MouseEnter="ControlButton_MouseEnter"
                 MouseLeave="ControlButton_MouseLeave"
                 MouseLeftButtonDown="ControlButton_Click">
+            <Border.ContextMenu>
+                <ContextMenu>
+                    <MenuItem Header="Quit" Click="Quit_Click"/>
+                </ContextMenu>
+            </Border.ContextMenu>
             <TextBlock x:Name="StatusIcon"
-                       Text="⚫"
+                       Text="⚪"
                        Foreground="White"
                        FontSize="20"
                        HorizontalAlignment="Center"
                        VerticalAlignment="Center"
-                       ToolTip="Click to toggle Focus Mode"/>
+                       ToolTip="Focus Mode OFF - Click to enable"/>
         </Border>
     </Grid>
 </Window>

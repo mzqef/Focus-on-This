@@ -55,11 +55,16 @@ namespace FocusOnThis
             }
             else
             {
-                _isEnabled = false;
-                DisableFocusMode();
-                StatusIcon.Text = "⚪";
-                StatusIcon.ToolTip = "Focus Mode OFF - Click to enable";
+                SetFocusModeOff();
             }
+        }
+
+        private void SetFocusModeOff()
+        {
+            _isEnabled = false;
+            DisableFocusMode();
+            StatusIcon.Text = "⚪";
+            StatusIcon.ToolTip = "Focus Mode OFF - Click to enable";
         }
 
         private void Quit_Click(object sender, RoutedEventArgs e)
@@ -146,10 +151,7 @@ namespace FocusOnThis
                     else
                     {
                         // Window no longer exists - disable focus mode
-                        _isEnabled = false;
-                        DisableFocusMode();
-                        StatusIcon.Text = "⚪";
-                        StatusIcon.ToolTip = "Focus Mode OFF - Click to enable";
+                        SetFocusModeOff();
                     }
                 }
             }

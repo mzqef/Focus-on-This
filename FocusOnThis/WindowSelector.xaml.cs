@@ -145,15 +145,29 @@ namespace FocusOnThis
         [DllImport("user32.dll")]
         private static extern int GetWindowTextLength(IntPtr hWnd);
 
+        // Reusable StringBuilder to reduce allocations during window enumeration
+        [ThreadStatic]
+        private static StringBuilder? _titleBuilder;
+        private const int MaxTitleLength = 256;
+
         public static string GetWindowTitle(IntPtr hWnd)
         {
             int length = GetWindowTextLength(hWnd);
             if (length == 0)
                 return string.Empty;
 
-            StringBuilder sb = new StringBuilder(length + 1);
-            GetWindowText(hWnd, sb, sb.Capacity);
-            return sb.ToString();
+            // Reuse StringBuilder to reduce allocations
+            if (_titleBuilder == null || _titleBuilder.Capacity < length + 1)
+            {
+                _titleBuilder = new StringBuilder(Math.Max(length + 1, MaxTitleLength));
+            }
+            else
+            {
+                _titleBuilder.Clear();
+            }
+
+            GetWindowText(hWnd, _titleBuilder, _titleBuilder.Capacity);
+            return _titleBuilder.ToString();
         }
     }
 }

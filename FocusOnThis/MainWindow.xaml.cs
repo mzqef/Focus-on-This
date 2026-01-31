@@ -171,8 +171,15 @@ namespace FocusOnThis
             // Update overlay to show hole for this window
             _overlay?.UpdateFocusedWindow(rect);
 
-            // Clip cursor to the focused window bounds
-            NativeMethods.RECT clipRect = rect;
+            // Clip cursor to the focused window bounds with an inset of 1 pixel
+            // This prevents the cursor from escaping when clicking on the window boundary
+            NativeMethods.RECT clipRect = new NativeMethods.RECT
+            {
+                Left = rect.Left + 1,
+                Top = rect.Top + 1,
+                Right = rect.Right - 1,
+                Bottom = rect.Bottom - 1
+            };
             NativeMethods.ClipCursor(ref clipRect);
         }
 

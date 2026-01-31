@@ -3,7 +3,6 @@ using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Threading;
-using System.Windows.Automation;
 
 namespace FocusOnThis
 {
@@ -110,33 +109,23 @@ namespace FocusOnThis
         {
             try
             {
-                // Get the currently focused window using UI Automation
-                var focusedElement = AutomationElement.FocusedElement;
-                if (focusedElement != null)
+                // Use GetForegroundWindow as the primary method - it reliably returns
+                // the top-level window handle for the active window
+                var hwnd = NativeMethods.GetForegroundWindow();
+                
+                if (hwnd != IntPtr.Zero && !IsOurWindow(hwnd))
                 {
-                    var windowHandle = new IntPtr(focusedElement.Current.NativeWindowHandle);
-                    
                     // Only update if the focused window has changed
-                    if (windowHandle != _lastFocusedWindow && windowHandle != IntPtr.Zero)
+                    if (hwnd != _lastFocusedWindow)
                     {
-                        // Ignore our own windows
-                        if (!IsOurWindow(windowHandle))
-                        {
-                            _lastFocusedWindow = windowHandle;
-                            UpdateFocusedWindow(windowHandle);
-                        }
+                        _lastFocusedWindow = hwnd;
+                        UpdateFocusedWindow(hwnd);
                     }
                 }
             }
             catch
             {
-                // In case of any UIA exceptions, try fallback method
-                var hwnd = NativeMethods.GetForegroundWindow();
-                if (hwnd != _lastFocusedWindow && hwnd != IntPtr.Zero && !IsOurWindow(hwnd))
-                {
-                    _lastFocusedWindow = hwnd;
-                    UpdateFocusedWindow(hwnd);
-                }
+                // Silently ignore any errors - the timer will retry on the next tick
             }
         }
 

@@ -40,16 +40,22 @@ namespace FocusOnThis
 
         private void ControlButton_Click(object sender, MouseButtonEventArgs e)
         {
-            _isEnabled = !_isEnabled;
-            
-            if (_isEnabled)
+            if (!_isEnabled)
             {
-                EnableFocusMode();
-                StatusIcon.Text = "🟢";
-                StatusIcon.ToolTip = "Focus Mode ON - Click to disable";
+                // Show window selector dialog
+                var selector = new WindowSelector();
+                if (selector.ShowDialog() == true && selector.SelectedWindowHandle != IntPtr.Zero)
+                {
+                    _isEnabled = true;
+                    EnableFocusMode(selector.SelectedWindowHandle, selector.SelectedWindowRect);
+                    StatusIcon.Text = "🟢";
+                    StatusIcon.ToolTip = "Focus Mode ON - Click to disable";
+                }
+                // If user cancels, don't enable focus mode
             }
             else
             {
+                _isEnabled = false;
                 DisableFocusMode();
                 StatusIcon.Text = "⚪";
                 StatusIcon.ToolTip = "Focus Mode OFF - Click to enable";
@@ -83,13 +89,20 @@ namespace FocusOnThis
             }
         }
 
-        private void EnableFocusMode()
+        private void EnableFocusMode(IntPtr selectedWindowHandle, NativeMethods.RECT selectedWindowRect)
         {
+            // Store the selected window as the initial target
+            _lastFocusedWindow = selectedWindowHandle;
+            _lastWindowRect = selectedWindowRect;
+
             // Create and show overlay
             _overlay = new FocusOverlay();
             _overlay.Show();
 
-            // Start monitoring focused window
+            // Immediately update to focus on the selected window
+            UpdateFocusedWindow(selectedWindowHandle, selectedWindowRect);
+
+            // Start monitoring focused window (for tracking window moves/resizes)
             _focusMonitorTimer = new DispatcherTimer();
             _focusMonitorTimer.Interval = TimeSpan.FromMilliseconds(100);
             _focusMonitorTimer.Tick += FocusMonitorTimer_Tick;
@@ -116,22 +129,27 @@ namespace FocusOnThis
         {
             try
             {
-                // Use GetForegroundWindow as the primary method - it reliably returns
-                // the top-level window handle for the active window
-                var hwnd = NativeMethods.GetForegroundWindow();
-                
-                if (hwnd != IntPtr.Zero && !IsOurWindow(hwnd))
+                // Track the selected window's position changes (for moving/resizing)
+                // instead of following focus changes
+                if (_lastFocusedWindow != IntPtr.Zero)
                 {
                     // Get the current window rectangle
-                    if (NativeMethods.GetWindowRect(hwnd, out NativeMethods.RECT currentRect))
+                    if (NativeMethods.GetWindowRect(_lastFocusedWindow, out NativeMethods.RECT currentRect))
                     {
-                        // Update if the window handle has changed OR if the window position/size has changed
-                        if (hwnd != _lastFocusedWindow || !RectsEqual(_lastWindowRect, currentRect))
+                        // Update if the window position/size has changed
+                        if (!RectsEqual(_lastWindowRect, currentRect))
                         {
-                            _lastFocusedWindow = hwnd;
                             _lastWindowRect = currentRect;
-                            UpdateFocusedWindow(hwnd, currentRect);
+                            UpdateFocusedWindow(_lastFocusedWindow, currentRect);
                         }
+                    }
+                    else
+                    {
+                        // Window no longer exists - disable focus mode
+                        _isEnabled = false;
+                        DisableFocusMode();
+                        StatusIcon.Text = "⚪";
+                        StatusIcon.ToolTip = "Focus Mode OFF - Click to enable";
                     }
                 }
             }
@@ -144,23 +162,6 @@ namespace FocusOnThis
         private bool RectsEqual(NativeMethods.RECT a, NativeMethods.RECT b)
         {
             return a.Left == b.Left && a.Top == b.Top && a.Right == b.Right && a.Bottom == b.Bottom;
-        }
-
-        private bool IsOurWindow(IntPtr hwnd)
-        {
-            // Check if this is our main window or overlay
-            var ourMainWindow = new System.Windows.Interop.WindowInteropHelper(this).Handle;
-            if (hwnd == ourMainWindow)
-                return true;
-                
-            if (_overlay != null)
-            {
-                var overlayHandle = new System.Windows.Interop.WindowInteropHelper(_overlay).Handle;
-                if (hwnd == overlayHandle)
-                    return true;
-            }
-            
-            return false;
         }
 
         private void UpdateFocusedWindow(IntPtr hwnd, NativeMethods.RECT rect)

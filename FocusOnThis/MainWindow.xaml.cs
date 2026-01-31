@@ -13,6 +13,7 @@ namespace FocusOnThis
         private DispatcherTimer? _hideTimer;
         private DispatcherTimer? _focusMonitorTimer;
         private IntPtr _lastFocusedWindow = IntPtr.Zero;
+        private NativeMethods.RECT _lastWindowRect = new NativeMethods.RECT { Left = -1, Top = -1, Right = -1, Bottom = -1 };
         private bool _isMouseOver = false;
 
         public MainWindow()
@@ -50,9 +51,15 @@ namespace FocusOnThis
             else
             {
                 DisableFocusMode();
-                StatusIcon.Text = "⚫";
+                StatusIcon.Text = "⚪";
                 StatusIcon.ToolTip = "Focus Mode OFF - Click to enable";
             }
+        }
+
+        private void Quit_Click(object sender, RoutedEventArgs e)
+        {
+            DisableFocusMode();
+            Application.Current.Shutdown();
         }
 
         private void ControlButton_MouseEnter(object sender, MouseEventArgs e)
@@ -115,11 +122,16 @@ namespace FocusOnThis
                 
                 if (hwnd != IntPtr.Zero && !IsOurWindow(hwnd))
                 {
-                    // Only update if the focused window has changed
-                    if (hwnd != _lastFocusedWindow)
+                    // Get the current window rectangle
+                    if (NativeMethods.GetWindowRect(hwnd, out NativeMethods.RECT currentRect))
                     {
-                        _lastFocusedWindow = hwnd;
-                        UpdateFocusedWindow(hwnd);
+                        // Update if the window handle has changed OR if the window position/size has changed
+                        if (hwnd != _lastFocusedWindow || !RectsEqual(_lastWindowRect, currentRect))
+                        {
+                            _lastFocusedWindow = hwnd;
+                            _lastWindowRect = currentRect;
+                            UpdateFocusedWindow(hwnd, currentRect);
+                        }
                     }
                 }
             }
@@ -127,6 +139,11 @@ namespace FocusOnThis
             {
                 // Silently ignore any errors - the timer will retry on the next tick
             }
+        }
+
+        private bool RectsEqual(NativeMethods.RECT a, NativeMethods.RECT b)
+        {
+            return a.Left == b.Left && a.Top == b.Top && a.Right == b.Right && a.Bottom == b.Bottom;
         }
 
         private bool IsOurWindow(IntPtr hwnd)
@@ -146,18 +163,14 @@ namespace FocusOnThis
             return false;
         }
 
-        private void UpdateFocusedWindow(IntPtr hwnd)
+        private void UpdateFocusedWindow(IntPtr hwnd, NativeMethods.RECT rect)
         {
-            // Get window rectangle
-            if (NativeMethods.GetWindowRect(hwnd, out NativeMethods.RECT rect))
-            {
-                // Update overlay to show hole for this window
-                _overlay?.UpdateFocusedWindow(rect);
+            // Update overlay to show hole for this window
+            _overlay?.UpdateFocusedWindow(rect);
 
-                // Clip cursor to the focused window bounds
-                NativeMethods.RECT clipRect = rect;
-                NativeMethods.ClipCursor(ref clipRect);
-            }
+            // Clip cursor to the focused window bounds
+            NativeMethods.RECT clipRect = rect;
+            NativeMethods.ClipCursor(ref clipRect);
         }
 
         protected override void OnClosed(EventArgs e)

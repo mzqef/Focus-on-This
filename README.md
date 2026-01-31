@@ -32,14 +32,16 @@ A Windows application that helps you focus on specific windows by masking the re
 
 1. Launch the application - a small control button will appear at the top center of your screen
 2. Click the control button to toggle Focus Mode ON/OFF
-   - ⚫ (Black): Focus Mode is OFF
+   - ⚪ (White): Focus Mode is OFF
    - 🟢 (Green): Focus Mode is ON
 3. When Focus Mode is ON:
    - The currently focused window will be highlighted (clear)
    - All other areas of the screen will be masked with a semi-transparent dark overlay
    - Your mouse cursor will be confined to the focused window
+   - Moving, resizing, or reshaping the focused window automatically updates the mask and cursor confinement
 4. Switch between windows normally - the focus mask will automatically follow the active window
 5. Click the control button again to disable Focus Mode
+6. Right-click the control button for additional options (including Quit)
 
 ## How It Works
 

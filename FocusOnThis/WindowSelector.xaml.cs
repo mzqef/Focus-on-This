@@ -23,10 +23,7 @@ namespace FocusOnThis
         private void Header_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
             // Allow dragging the window by the header
-            if (e.LeftButton == MouseButtonState.Pressed)
-            {
-                DragMove();
-            }
+            DragMove();
         }
 
         private void RefreshWindowList()

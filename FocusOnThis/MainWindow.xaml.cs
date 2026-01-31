@@ -125,20 +125,7 @@ namespace FocusOnThis
             }
             catch
             {
-                // Fallback: try to get foreground window again in case of any issue
-                try
-                {
-                    var hwnd = NativeMethods.GetForegroundWindow();
-                    if (hwnd != _lastFocusedWindow && hwnd != IntPtr.Zero && !IsOurWindow(hwnd))
-                    {
-                        _lastFocusedWindow = hwnd;
-                        UpdateFocusedWindow(hwnd);
-                    }
-                }
-                catch
-                {
-                    // Silently ignore any errors in the fallback
-                }
+                // Silently ignore any errors - the timer will retry on the next tick
             }
         }
 

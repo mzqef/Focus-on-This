@@ -36,7 +36,10 @@ namespace FocusOnThis
             {
                 return source.CompositionTarget.TransformFromDevice;
             }
-            // Fallback to identity matrix if source is not available
+            // Fallback to identity matrix if PresentationSource is unavailable.
+            // This may occur during window initialization before the window is fully rendered.
+            // At 100% DPI scaling, identity matrix produces correct results.
+            // For higher DPI settings, the first valid call will correct any temporary mismatch.
             return Matrix.Identity;
         }
 

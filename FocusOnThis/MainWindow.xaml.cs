@@ -107,6 +107,9 @@ namespace FocusOnThis
             // Immediately update to focus on the selected window
             UpdateFocusedWindow(selectedWindowHandle, selectedWindowRect);
 
+            // Bring the selected window to the foreground (auto focus)
+            NativeMethods.SetForegroundWindow(selectedWindowHandle);
+
             // Start monitoring focused window (for tracking window moves/resizes)
             _focusMonitorTimer = new DispatcherTimer();
             _focusMonitorTimer.Interval = TimeSpan.FromMilliseconds(100);
@@ -215,5 +218,9 @@ namespace FocusOnThis
         [DllImport("user32.dll")]
         [return: MarshalAs(UnmanagedType.Bool)]
         public static extern bool ClipCursor(IntPtr lpRect);
+
+        [DllImport("user32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static extern bool SetForegroundWindow(IntPtr hWnd);
     }
 }

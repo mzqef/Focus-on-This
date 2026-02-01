@@ -123,18 +123,11 @@
                     <ControlTemplate TargetType="ListBoxItem">
                         <Border x:Name="border" 
                                 Background="Transparent" 
-                                CornerRadius="6"
+                                CornerRadius="8"
                                 Padding="{TemplateBinding Padding}"
                                 BorderThickness="2"
                                 BorderBrush="Transparent">
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Grid.Column="0" Text="📄" FontSize="16" Margin="0,0,10,0" VerticalAlignment="Center"/>
-                                <ContentPresenter Grid.Column="1" VerticalAlignment="Center"/>
-                            </Grid>
+                            <ContentPresenter VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
@@ -149,6 +142,68 @@
                 </Setter.Value>
             </Setter>
         </Style>
+        
+        <!-- Window Item Data Template -->
+        <DataTemplate x:Key="WindowItemTemplate">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                
+                <!-- Icon Container -->
+                <Border Grid.Column="0" 
+                        Width="36" Height="36" 
+                        Background="{StaticResource BackgroundBrush}"
+                        CornerRadius="8"
+                        Margin="0,0,12,0"
+                        VerticalAlignment="Center">
+                    <Grid>
+                        <!-- Actual window icon -->
+                        <Image Source="{Binding Icon}" 
+                               Width="24" Height="24"
+                               RenderOptions.BitmapScalingMode="HighQuality"
+                               HorizontalAlignment="Center" 
+                               VerticalAlignment="Center">
+                            <Image.Style>
+                                <Style TargetType="Image">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Icon}" Value="{x:Null}">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Image.Style>
+                        </Image>
+                        <!-- Fallback icon when no icon available -->
+                        <TextBlock Text="🪟" 
+                                   FontSize="18"
+                                   HorizontalAlignment="Center" 
+                                   VerticalAlignment="Center">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Icon}" Value="{x:Null}">
+                                            <Setter Property="Visibility" Value="Visible"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </Grid>
+                </Border>
+                
+                <!-- Window Title -->
+                <TextBlock Grid.Column="1" 
+                           Text="{Binding Title}" 
+                           FontSize="13"
+                           Foreground="{StaticResource TextPrimaryBrush}"
+                           VerticalAlignment="Center"
+                           TextTrimming="CharacterEllipsis"
+                           MaxWidth="380"/>
+            </Grid>
+        </DataTemplate>
         
         <!-- ListBox Style -->
         <Style x:Key="WindowListBoxStyle" TargetType="ListBox">
@@ -276,7 +331,7 @@
                 <ListBox x:Name="WindowListBox" 
                          Grid.Row="1"
                          Style="{StaticResource WindowListBoxStyle}"
-                         DisplayMemberPath="Title"
+                         ItemTemplate="{StaticResource WindowItemTemplate}"
                          SelectionMode="Single"
                          MouseDoubleClick="WindowListBox_MouseDoubleClick"/>
             </Grid>

@@ -4,6 +4,9 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Windows;
 using System.Windows.Input;
+using System.Windows.Interop;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
 
 namespace FocusOnThis
 {
@@ -61,7 +64,8 @@ namespace FocusOnThis
                     {
                         Handle = hWnd,
                         Title = title,
-                        Rect = rect
+                        Rect = rect,
+                        Icon = IconExtractor.GetWindowIcon(hWnd)
                     });
                 }
 
@@ -131,6 +135,138 @@ namespace FocusOnThis
         public IntPtr Handle { get; set; }
         public string Title { get; set; } = string.Empty;
         public NativeMethods.RECT Rect { get; set; }
+        public ImageSource? Icon { get; set; }
+    }
+
+    public static class IconExtractor
+    {
+        private const int GCL_HICON = -14;
+        private const int GCL_HICONSM = -34;
+        private const int ICON_SMALL = 0;
+        private const int ICON_BIG = 1;
+        private const int ICON_SMALL2 = 2;
+        private const uint WM_GETICON = 0x007F;
+        private const uint SMTO_ABORTIFHUNG = 0x0002;
+
+        [DllImport("user32.dll", CharSet = CharSet.Auto)]
+        private static extern IntPtr SendMessageTimeout(IntPtr hWnd, uint Msg, IntPtr wParam, IntPtr lParam, uint fuFlags, uint uTimeout, out IntPtr lpdwResult);
+
+        [DllImport("user32.dll", EntryPoint = "GetClassLongPtr")]
+        private static extern IntPtr GetClassLongPtr64(IntPtr hWnd, int nIndex);
+
+        [DllImport("user32.dll", EntryPoint = "GetClassLong")]
+        private static extern IntPtr GetClassLongPtr32(IntPtr hWnd, int nIndex);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern bool DestroyIcon(IntPtr hIcon);
+
+        [DllImport("user32.dll")]
+        private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint processId);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern IntPtr OpenProcess(uint dwDesiredAccess, bool bInheritHandle, uint dwProcessId);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern bool CloseHandle(IntPtr hObject);
+
+        [DllImport("psapi.dll", CharSet = CharSet.Unicode)]
+        private static extern uint GetModuleFileNameEx(IntPtr hProcess, IntPtr hModule, StringBuilder lpFilename, uint nSize);
+
+        [DllImport("shell32.dll", CharSet = CharSet.Unicode)]
+        private static extern IntPtr ExtractIcon(IntPtr hInst, string lpszExeFileName, int nIconIndex);
+
+        private const uint PROCESS_QUERY_LIMITED_INFORMATION = 0x1000;
+
+        private static IntPtr GetClassLongPtr(IntPtr hWnd, int nIndex)
+        {
+            return IntPtr.Size == 8 ? GetClassLongPtr64(hWnd, nIndex) : GetClassLongPtr32(hWnd, nIndex);
+        }
+
+        public static ImageSource? GetWindowIcon(IntPtr hwnd)
+        {
+            IntPtr hIcon = IntPtr.Zero;
+            bool needsDestroy = false;
+
+            try
+            {
+                // Try WM_GETICON with small icon first (better quality for our use case)
+                SendMessageTimeout(hwnd, WM_GETICON, (IntPtr)ICON_SMALL2, IntPtr.Zero, SMTO_ABORTIFHUNG, 100, out hIcon);
+                
+                if (hIcon == IntPtr.Zero)
+                    SendMessageTimeout(hwnd, WM_GETICON, (IntPtr)ICON_SMALL, IntPtr.Zero, SMTO_ABORTIFHUNG, 100, out hIcon);
+
+                if (hIcon == IntPtr.Zero)
+                    SendMessageTimeout(hwnd, WM_GETICON, (IntPtr)ICON_BIG, IntPtr.Zero, SMTO_ABORTIFHUNG, 100, out hIcon);
+
+                // Try class icon
+                if (hIcon == IntPtr.Zero)
+                    hIcon = GetClassLongPtr(hwnd, GCL_HICONSM);
+
+                if (hIcon == IntPtr.Zero)
+                    hIcon = GetClassLongPtr(hwnd, GCL_HICON);
+
+                // Try to get icon from executable
+                if (hIcon == IntPtr.Zero)
+                {
+                    hIcon = GetIconFromProcess(hwnd);
+                    needsDestroy = hIcon != IntPtr.Zero;
+                }
+
+                if (hIcon != IntPtr.Zero)
+                {
+                    var iconSource = Imaging.CreateBitmapSourceFromHIcon(
+                        hIcon,
+                        Int32Rect.Empty,
+                        BitmapSizeOptions.FromEmptyOptions());
+                    iconSource.Freeze(); // Make it thread-safe
+                    return iconSource;
+                }
+            }
+            catch
+            {
+                // Silently ignore icon extraction failures
+            }
+            finally
+            {
+                if (needsDestroy && hIcon != IntPtr.Zero)
+                    DestroyIcon(hIcon);
+            }
+
+            return null;
+        }
+
+        private static IntPtr GetIconFromProcess(IntPtr hwnd)
+        {
+            try
+            {
+                GetWindowThreadProcessId(hwnd, out uint processId);
+                IntPtr hProcess = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, false, processId);
+                if (hProcess == IntPtr.Zero)
+                    return IntPtr.Zero;
+
+                try
+                {
+                    var sb = new StringBuilder(1024);
+                    if (GetModuleFileNameEx(hProcess, IntPtr.Zero, sb, (uint)sb.Capacity) > 0)
+                    {
+                        string exePath = sb.ToString();
+                        IntPtr hIcon = ExtractIcon(IntPtr.Zero, exePath, 0);
+                        if (hIcon != IntPtr.Zero && hIcon.ToInt64() != 1) // ExtractIcon returns 1 on failure
+                            return hIcon;
+                    }
+                }
+                finally
+                {
+                    CloseHandle(hProcess);
+                }
+            }
+            catch
+            {
+                // Silently ignore
+            }
+
+            return IntPtr.Zero;
+        }
     }
 
     public static class WindowEnumerator

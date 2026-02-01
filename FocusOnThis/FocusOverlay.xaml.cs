@@ -1,5 +1,7 @@
 using System;
+using System.Runtime.InteropServices;
 using System.Windows;
+using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Shapes;
 
@@ -24,6 +26,19 @@ namespace FocusOnThis
             
             // Create the semi-transparent mask
             CreateMask();
+        }
+
+        protected override void OnSourceInitialized(EventArgs e)
+        {
+            base.OnSourceInitialized(e);
+            
+            // Apply WS_EX_TRANSPARENT and WS_EX_TOOLWINDOW extended styles
+            // This ensures the overlay window is completely click-through and
+            // doesn't interfere with foreground window detection during Alt+Tab
+            var helper = new WindowInteropHelper(this);
+            int exStyle = NativeMethods.GetWindowLong(helper.Handle, NativeMethods.GWL_EXSTYLE);
+            exStyle |= NativeMethods.WS_EX_TRANSPARENT | NativeMethods.WS_EX_TOOLWINDOW;
+            NativeMethods.SetWindowLong(helper.Handle, NativeMethods.GWL_EXSTYLE, exStyle);
         }
 
         /// <summary>

@@ -20,6 +20,12 @@ namespace FocusOnThis
             RefreshWindowList();
         }
 
+        private void Header_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            // Allow dragging the window by the header
+            DragMove();
+        }
+
         private void RefreshWindowList()
         {
             _windows.Clear();

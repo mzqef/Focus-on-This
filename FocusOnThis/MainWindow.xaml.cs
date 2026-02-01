@@ -175,14 +175,17 @@ namespace FocusOnThis
             // Update overlay to show hole for this window
             _overlay?.UpdateFocusedWindow(rect);
 
-            // Clip cursor to the focused window bounds with an inset of 1 pixel
-            // This prevents the cursor from escaping when clicking on the window boundary
+            // Clip cursor to the focused window bounds with an inset of 4 pixels
+            // A larger inset (4 pixels instead of 1) is needed because:
+            // 1. Window borders and resize handles can be several pixels wide
+            // 2. Clicking exactly on the boundary can trigger system resize operations that release cursor clipping
+            // 3. On high-DPI displays, the effective border area is scaled
             NativeMethods.RECT clipRect = new NativeMethods.RECT
             {
-                Left = rect.Left + 1,
-                Top = rect.Top + 1,
-                Right = rect.Right - 1,
-                Bottom = rect.Bottom - 1
+                Left = rect.Left + 4,
+                Top = rect.Top + 4,
+                Right = rect.Right - 4,
+                Bottom = rect.Bottom - 4
             };
             NativeMethods.ClipCursor(ref clipRect);
         }

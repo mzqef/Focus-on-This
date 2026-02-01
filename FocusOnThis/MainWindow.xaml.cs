@@ -104,11 +104,12 @@ namespace FocusOnThis
             _overlay = new FocusOverlay();
             _overlay.Show();
 
-            // Immediately update to focus on the selected window
-            UpdateFocusedWindow(selectedWindowHandle, selectedWindowRect);
-
-            // Bring the selected window to the foreground (auto focus)
+            // Bring the selected window to the foreground first (auto focus)
+            // This must be done BEFORE ClipCursor, as SetForegroundWindow can reset cursor clipping
             NativeMethods.SetForegroundWindow(selectedWindowHandle);
+
+            // Now update to focus on the selected window and apply cursor clipping
+            UpdateFocusedWindow(selectedWindowHandle, selectedWindowRect);
 
             // Start monitoring focused window (for tracking window moves/resizes)
             _focusMonitorTimer = new DispatcherTimer();
